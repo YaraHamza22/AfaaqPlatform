@@ -120,6 +120,15 @@ class Lesson extends Model implements HasMedia
      | Media Library
      ===================== */
 
+    /**
+     * Register media collections for the lesson.
+     *
+     * Each collection enforces explicit MIME type validation so the platform
+     * can store educational content in the formats listed in the functional
+     * requirements: PDF, video, audio, and presentations. The legacy
+     * `attachments` collection remains as a generic catch-all for
+     * miscellaneous downloads.
+     */
     public function registerMediaCollections(): void
     {
         $this->addMediaCollection('attachments');
@@ -130,6 +139,31 @@ class Lesson extends Model implements HasMedia
                 'video/mp4',
                 'video/x-m4v',
                 'video/quicktime',
+                'video/webm',
+            ]);
+
+        $this->addMediaCollection('pdf')
+            ->acceptsMimeTypes([
+                'application/pdf',
+            ]);
+
+        $this->addMediaCollection('audio')
+            ->acceptsMimeTypes([
+                'audio/mpeg',
+                'audio/mp3',
+                'audio/wav',
+                'audio/x-wav',
+                'audio/ogg',
+                'audio/aac',
+                'audio/x-m4a',
+                'audio/mp4',
+            ]);
+
+        $this->addMediaCollection('presentation')
+            ->acceptsMimeTypes([
+                'application/vnd.ms-powerpoint',
+                'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+                'application/vnd.oasis.opendocument.presentation',
             ]);
     }
 }

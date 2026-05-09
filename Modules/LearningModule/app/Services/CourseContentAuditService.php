@@ -89,5 +89,22 @@ class CourseContentAuditService
                 'auditor_id' => $auditor->id,
             ],
         ]);
+
+        // Always notify super admins when an auditor submits a review.
+        $this->notificationService->sendToUsers([
+            'role_names' => ['super-admin'],
+            'title' => __('إشعار مراجعة محتوى').': '.$courseTitle,
+            'body' => $body !== '' ? $body : $verdictLabel,
+            'type' => 'course_content_audit.super_admin',
+            'data' => [
+                'course_id' => $course->course_id,
+                'course_slug' => $course->slug,
+                'audit_id' => $audit->id,
+                'verdict' => $audit->verdict,
+                'lesson_id' => $audit->lesson_id,
+                'auditor_id' => $auditor->id,
+                'source' => 'auditor_review',
+            ],
+        ]);
     }
 }

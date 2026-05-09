@@ -30,6 +30,9 @@
     { "key": "quizId", "value": "1" },
     { "key": "questionId", "value": "1" },
     { "key": "notificationId", "value": "uuid-from-notifications-list" },
+    { "key": "chatThreadId", "value": "1" },
+    { "key": "chatMessageId", "value": "1" },
+    { "key": "participantUserId", "value": "2" },
     { "key": "lessonId", "value": "1" }
   ],
   "auth": {
@@ -411,6 +414,195 @@
             "method": "GET",
             "header": [{ "key": "Accept", "value": "application/json" }],
             "url": "{{baseUrl}}/api/v1/questions/{{questionId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Communication — Chat & Realtime Notifications",
+      "description": "DB-first + WebSocket ready APIs. Use these requests to validate message/notification persistence and realtime payload triggers.",
+      "item": [
+        {
+          "name": "Create chat thread",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = pm.response.json();",
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+                  "pm.test('API status success', () => pm.expect(j.status).to.eql('success'));",
+                  "const id = j?.data?.id;",
+                  "if (id != null) pm.collectionVariables.set('chatThreadId', String(id));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Audit Discussion - Week 1\",\n  \"course_id\": null,\n  \"participant_ids\": [2, 3]\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/chat-threads"
+          }
+        },
+        {
+          "name": "List my chat threads",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/chat-threads"
+          }
+        },
+        {
+          "name": "Show chat thread",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/chat-threads/{{chatThreadId}}"
+          }
+        },
+        {
+          "name": "Add participant to thread",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": {{participantUserId}},\n  \"role\": \"member\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/chat-threads/{{chatThreadId}}/participants"
+          }
+        },
+        {
+          "name": "List participants",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/chat-threads/{{chatThreadId}}/participants"
+          }
+        },
+        {
+          "name": "Send chat message",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = pm.response.json();",
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+                  "pm.test('API status success', () => pm.expect(j.status).to.eql('success'));",
+                  "const id = j?.data?.id;",
+                  "if (id != null) pm.collectionVariables.set('chatMessageId', String(id));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"body\": \"This is a realtime test message\",\n  \"metadata\": {\n    \"type\": \"text\",\n    \"client_message_id\": \"msg-local-001\"\n  }\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/chat-threads/{{chatThreadId}}/messages"
+          }
+        },
+        {
+          "name": "List thread messages",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/chat-threads/{{chatThreadId}}/messages"
+          }
+        },
+        {
+          "name": "Mark message read",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/chat-messages/{{chatMessageId}}/read"
+          }
+        },
+        {
+          "name": "Chat unread count",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/chat-unread-count"
+          }
+        },
+        {
+          "name": "Archive chat thread",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/chat-threads/{{chatThreadId}}/archive"
+          }
+        },
+        {
+          "name": "Remove participant",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/chat-threads/{{chatThreadId}}/participants/{{participantUserId}}"
+          }
+        },
+        {
+          "name": "Create notification (system)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_ids\": [2, 3],\n  \"title\": \"Course updated\",\n  \"body\": \"A lesson has been updated and needs review\",\n  \"type\": \"system\",\n  \"data\": {\n    \"entity\": \"lesson\",\n    \"entity_id\": 1,\n    \"action\": \"updated\"\n  }\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/notifications"
+          }
+        },
+        {
+          "name": "List notifications (auditor scope)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = pm.response.json();",
+                  "const first = j?.data?.data?.[0] || j?.data?.[0];",
+                  "if (first?.id) pm.collectionVariables.set('notificationId', String(first.id));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/auditor/notifications?unread_only=true"
+          }
+        },
+        {
+          "name": "Unread notifications count (auditor)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/auditor/notifications/unread-count"
           }
         }
       ]

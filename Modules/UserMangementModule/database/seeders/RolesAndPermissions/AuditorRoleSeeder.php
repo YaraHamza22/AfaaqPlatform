@@ -57,6 +57,9 @@ class AuditorRoleSeeder extends Seeder
             // مراجعة محتوى الكورس (سجل + تسجيل مراجعة)
             'list-reviews',
             'create-review',
+
+            // allow auditor to send notification to super-admin (checked in controller)
+            'create-notification',
         ];
 
         $role = Role::firstOrCreate(['name' => 'auditor', 'guard_name' => 'api']);

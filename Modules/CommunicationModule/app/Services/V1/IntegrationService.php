@@ -4,6 +4,7 @@ namespace Modules\CommunicationModule\Services\V1;
 
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
+use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Modules\CommunicationModule\Models\ExternalIntegration;
@@ -18,6 +19,7 @@ class IntegrationService
 {
     public function getOAuthRedirectUrl(string $provider, int $userId): array
     {
+        $provider = $this->normalizeProvider($provider);
         $cfg = $this->providerConfig($provider);
         $state = base64_encode(json_encode([
             'provider' => $provider,
@@ -47,8 +49,9 @@ class IntegrationService
 
     public function exchangeAuthorizationCode(string $provider, int $userId, string $code): ExternalIntegration
     {
+        $provider = $this->normalizeProvider($provider);
         $cfg = $this->providerConfig($provider);
-        $response = Http::asForm()->post($cfg['token_url'], [
+        $response = $this->httpClient()->asForm()->post($cfg['token_url'], [
             'grant_type' => 'authorization_code',
             'code' => $code,
             'client_id' => $cfg['client_id'],
@@ -83,6 +86,21 @@ class IntegrationService
 
     public function publishSession(VirtualSession $session): VirtualSession
     {
+        // Manual flow: if admin already provided a meeting link, publish without provider API calls.
+        if (filled($session->join_url)) {
+            $session->update([
+                'status' => 'published',
+                'provider_event_id' => (string) ($session->provider_event_id ?: Str::uuid()),
+                'metadata' => array_merge((array) $session->metadata, [
+                    'provider_payload' => [
+                        'mode' => 'manual_link',
+                    ],
+                ]),
+            ]);
+
+            return $session->fresh();
+        }
+
         $integration = ExternalIntegration::query()->findOrFail($session->integration_id);
         $integration = $this->refreshTokenIfExpired($integration);
 
@@ -104,13 +122,18 @@ class IntegrationService
 
     public function cancelSession(VirtualSession $session): VirtualSession
     {
+        if (! $session->integration_id) {
+            $session->update(['status' => 'cancelled']);
+            return $session->fresh();
+        }
+
         $integration = ExternalIntegration::query()->findOrFail($session->integration_id);
         $integration = $this->refreshTokenIfExpired($integration);
 
         if ($session->provider_event_id) {
             if ($session->provider === 'zoom') {
                 $this->cancelZoomMeeting($integration, $session->provider_event_id);
-            } elseif ($session->provider === 'google_classroom') {
+            } elseif (in_array($session->provider, ['google_classroom', 'google_meet'], true)) {
                 $this->archiveGoogleClassroomCourseWork($integration, $session);
             }
         }
@@ -121,6 +144,8 @@ class IntegrationService
 
     public function processWebhook(string $provider, array $payload): void
     {
+        $provider = $this->normalizeProvider($provider);
+
         if ($provider === 'zoom') {
             $event = (string) ($payload['event'] ?? '');
             $object = (array) Arr::get($payload, 'payload.object', []);
@@ -215,8 +240,87 @@ class IntegrationService
         return OfflineSyncLog::query()->create($payload);
     }
 
+    public function storeSyncLogsBatch(int $userId, string $deviceId, array $entries): array
+    {
+        $stored = 0;
+        $duplicates = 0;
+        $rows = [];
+
+        foreach ($entries as $entry) {
+            $clientEventId = (string) $entry['client_event_id'];
+            $existing = OfflineSyncLog::query()
+                ->where('user_id', $userId)
+                ->where('device_id', $deviceId)
+                ->where('client_event_id', $clientEventId)
+                ->first();
+
+            if ($existing) {
+                $duplicates++;
+                $rows[] = $existing;
+                continue;
+            }
+
+            $row = OfflineSyncLog::query()->create([
+                'user_id' => $userId,
+                'offline_package_id' => $entry['offline_package_id'] ?? null,
+                'device_id' => $deviceId,
+                'client_event_id' => $clientEventId,
+                'action' => $entry['action'],
+                'payload' => $entry['payload'] ?? null,
+                'created_at' => $entry['occurred_at'] ?? now(),
+            ]);
+
+            $stored++;
+            $rows[] = $row;
+        }
+
+        return [
+            'stored' => $stored,
+            'duplicates' => $duplicates,
+            'entries' => $rows,
+        ];
+    }
+
+    public function resolveOfflineDelta(int $courseId, ?string $currentVersion): array
+    {
+        $latest = OfflinePackage::query()
+            ->where('course_id', $courseId)
+            ->where('is_active', true)
+            ->latest('id')
+            ->first();
+
+        if (! $latest) {
+            return [
+                'has_update' => false,
+                'course_id' => $courseId,
+                'current_version' => $currentVersion,
+                'latest_version' => null,
+                'package' => null,
+            ];
+        }
+
+        $hasUpdate = $currentVersion === null || $currentVersion !== (string) $latest->version;
+        $manifestJson = json_encode($latest->manifest ?? [], JSON_UNESCAPED_UNICODE);
+
+        return [
+            'has_update' => $hasUpdate,
+            'course_id' => $courseId,
+            'current_version' => $currentVersion,
+            'latest_version' => (string) $latest->version,
+            'package' => [
+                'id' => $latest->id,
+                'version' => $latest->version,
+                'file_url' => $latest->file_url,
+                'manifest' => $latest->manifest,
+                'manifest_checksum' => hash('sha256', $manifestJson ?: '[]'),
+                'updated_at' => optional($latest->updated_at)->toIso8601String(),
+            ],
+        ];
+    }
+
     private function providerConfig(string $provider): array
     {
+        $provider = $this->normalizeProvider($provider);
         $cfg = (array) config("communicationmodule.integrations.{$provider}");
         if ($cfg === [] || blank($cfg['client_id'] ?? null) || blank($cfg['client_secret'] ?? null)) {
             throw new RuntimeException("Provider {$provider} is not configured.");
@@ -231,8 +335,8 @@ class IntegrationService
             return $integration;
         }
 
-        $cfg = $this->providerConfig($integration->provider);
-        $response = Http::asForm()->post($cfg['token_url'], [
+        $cfg = $this->providerConfig((string) $integration->provider);
+        $response = $this->httpClient()->asForm()->post($cfg['token_url'], [
             'grant_type' => 'refresh_token',
             'refresh_token' => $integration->refresh_token,
             'client_id' => $cfg['client_id'],
@@ -257,7 +361,7 @@ class IntegrationService
     private function createZoomMeeting(ExternalIntegration $integration, VirtualSession $session): array
     {
         $cfg = $this->providerConfig('zoom');
-        $response = Http::withToken($integration->access_token)
+        $response = $this->httpClient()->withToken($integration->access_token)
             ->post(rtrim($cfg['api_base_url'], '/').'/users/me/meetings', [
                 'topic' => $session->title,
                 'agenda' => $session->description,
@@ -285,7 +389,7 @@ class IntegrationService
     private function cancelZoomMeeting(ExternalIntegration $integration, string $meetingId): void
     {
         $cfg = $this->providerConfig('zoom');
-        Http::withToken($integration->access_token)
+        $this->httpClient()->withToken($integration->access_token)
             ->delete(rtrim($cfg['api_base_url'], '/')."/meetings/{$meetingId}");
     }
 
@@ -297,7 +401,7 @@ class IntegrationService
             throw new RuntimeException('google_course_id is required in session metadata.');
         }
 
-        $response = Http::withToken($integration->access_token)
+        $response = $this->httpClient()->withToken($integration->access_token)
             ->post(rtrim($cfg['api_base_url'], '/')."/courses/{$courseId}/courseWork", [
                 'title' => $session->title,
                 'description' => $session->description,
@@ -336,11 +440,32 @@ class IntegrationService
             return;
         }
 
-        Http::withToken($integration->access_token)->patch(
+        $this->httpClient()->withToken($integration->access_token)->patch(
             rtrim($cfg['api_base_url'], '/')."/courses/{$courseId}/courseWork/{$session->provider_event_id}",
             [
                 'state' => 'DELETED',
             ]
         );
+    }
+
+    private function httpClient(): PendingRequest
+    {
+        $caBundle = config('communicationmodule.http.ca_bundle');
+
+        if (is_string($caBundle) && trim($caBundle) !== '') {
+            $caBundlePath = trim($caBundle);
+            if (! is_file($caBundlePath)) {
+                throw new RuntimeException("SSL CA bundle not found: \"{$caBundlePath}\"");
+            }
+
+            return Http::withOptions(['verify' => $caBundlePath]);
+        }
+
+        return Http::withOptions(['verify' => true]);
+    }
+
+    private function normalizeProvider(string $provider): string
+    {
+        return $provider === 'google_meet' ? 'google_classroom' : $provider;
     }
 }

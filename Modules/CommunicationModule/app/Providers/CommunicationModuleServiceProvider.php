@@ -3,6 +3,7 @@
 namespace Modules\CommunicationModule\Providers;
 
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Notifications\DatabaseNotification;
 use Nwidart\Modules\Support\ModuleServiceProvider;
 use Illuminate\Console\Scheduling\Schedule;
 use Modules\CommunicationModule\Models\ChatMessage;
@@ -13,6 +14,7 @@ use Modules\CommunicationModule\Models\ForumThread;
 use Modules\CommunicationModule\Models\OfflineDownloadToken;
 use Modules\CommunicationModule\Models\OfflinePackage;
 use Modules\CommunicationModule\Models\VirtualSession;
+use Modules\CommunicationModule\Observers\CourseObserver;
 use Modules\CommunicationModule\Policies\ChatMessagePolicy;
 use Modules\CommunicationModule\Policies\ChatThreadPolicy;
 use Modules\CommunicationModule\Policies\ExternalIntegrationPolicy;
@@ -21,6 +23,12 @@ use Modules\CommunicationModule\Policies\ForumThreadPolicy;
 use Modules\CommunicationModule\Policies\OfflineDownloadTokenPolicy;
 use Modules\CommunicationModule\Policies\OfflinePackagePolicy;
 use Modules\CommunicationModule\Policies\VirtualSessionPolicy;
+use Modules\CommunicationModule\Observers\ChatMessageObserver;
+use Modules\CommunicationModule\Observers\DatabaseNotificationObserver;
+use Modules\CommunicationModule\Observers\VirtualSessionObserver;
+use Modules\CommunicationModule\Observers\ActivityLogObserver;
+use Modules\LearningModule\Models\Course;
+use Spatie\Activitylog\Models\Activity;
 
 class CommunicationModuleServiceProvider extends ModuleServiceProvider
 {
@@ -54,6 +62,12 @@ class CommunicationModuleServiceProvider extends ModuleServiceProvider
     public function boot(): void
     {
         parent::boot();
+
+        ChatMessage::observe(ChatMessageObserver::class);
+        VirtualSession::observe(VirtualSessionObserver::class);
+        DatabaseNotification::observe(DatabaseNotificationObserver::class);
+        Activity::observe(ActivityLogObserver::class);
+        Course::observe(CourseObserver::class);
 
         Gate::policy(ChatThread::class, ChatThreadPolicy::class);
         Gate::policy(ChatMessage::class, ChatMessagePolicy::class);

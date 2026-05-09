@@ -35,10 +35,11 @@ Route::middleware(['auth:api'])->prefix('v1')->group(function () {
     Route::post('forum-post-reports/{forumPostReport}/review', [ForumPostController::class, 'reviewReport']);
 
     Route::get('notifications', [NotificationController::class, 'index']);
-    Route::post('notifications', [NotificationController::class, 'store']);
+    Route::get('notifications/unread-count', [NotificationController::class, 'unreadCount']);
+    Route::post('notifications', [NotificationController::class, 'store'])->middleware('throttle:platform-write');
     Route::post('notifications/{notificationId}/read', [NotificationController::class, 'markRead']);
     Route::post('notifications/read-all', [NotificationController::class, 'markAllRead']);
-    Route::post('notifications/digest/trigger', [NotificationController::class, 'triggerDigest']);
+    Route::post('notifications/digest/trigger', [NotificationController::class, 'triggerDigest'])->middleware('throttle:platform-write');
 
     Route::apiResource('external-integrations', IntegrationController::class)->only(['index', 'store', 'update', 'destroy']);
     Route::get('external-integrations/{provider}/oauth-url', [IntegrationController::class, 'oauthUrl']);
@@ -52,7 +53,9 @@ Route::middleware(['auth:api'])->prefix('v1')->group(function () {
     Route::post('offline-packages/{offlinePackage}/tokens', [OfflinePackageController::class, 'issueToken']);
     Route::post('offline-packages/tokens/{offlineDownloadToken}/revoke', [OfflinePackageController::class, 'revokeToken']);
     Route::get('offline-packages/download/{token?}', [OfflinePackageController::class, 'downloadByToken']);
-    Route::post('offline-sync-logs', [OfflinePackageController::class, 'storeSyncLog']);
+    Route::get('offline-packages/course/{courseId}/delta', [OfflinePackageController::class, 'delta']);
+    Route::post('offline-sync-logs', [OfflinePackageController::class, 'storeSyncLog'])->middleware('throttle:platform-write');
+    Route::post('offline-sync-logs/batch', [OfflinePackageController::class, 'storeSyncLogBatch'])->middleware('throttle:platform-write');
 });
 
 Route::prefix('v1')->group(function () {

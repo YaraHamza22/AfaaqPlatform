@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use Modules\LearningModule\Http\Controllers\CourseController;
 use Modules\LearningModule\Http\Controllers\LessonController;
 use Modules\LearningModule\Http\Controllers\UnitController;
+use Modules\AssesmentModule\Http\Controllers\Api\V1\AssessmentProgressController;
 use Modules\ReportingModule\Http\Controllers\TeacherDashboardController;
 
 /**
@@ -230,6 +231,14 @@ Route::group(['middleware' => ['auth:api', 'role:instructor,api']], function () 
      * @controller LessonController@moveToPositionForCourseUnit
      */
     Route::put('/my-courses/{course}/units/{unit}/lessons/{lesson}/position', [LessonController::class, 'moveToPositionForCourseUnit']);
+
+    /**
+     * @name   Course Assessment Progress Report
+     * @path   GET /api/v1/my-courses/{courseId}/assessment-progress
+     * @desc   Instructor course-level assessment performance report.
+     * @controller AssessmentProgressController@courseProgress
+     */
+    Route::get('/my-courses/{courseId}/assessment-progress', [AssessmentProgressController::class, 'courseProgress']);
 
     /*
      * Flat Learning-module URLs (GET /api/v1/units/..., /api/v1/lessons/...) are registered in

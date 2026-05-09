@@ -11,6 +11,8 @@ use Modules\UserMangementModule\Http\Controllers\Api\V1\InstructorController;
 use Modules\UserMangementModule\Http\Controllers\Api\V1\PermissionController;
 use Modules\UserMangementModule\Http\Controllers\Api\V1\RoleController;
 use Modules\UserMangementModule\Http\Controllers\Api\V1\StudentController;
+use Modules\UserMangementModule\Http\Controllers\Api\V1\SecurityAuditLogController;
+use Modules\UserMangementModule\Http\Controllers\Api\V1\SuperAdminSettingsController;
 use Modules\UserMangementModule\Http\Controllers\Api\V1\UserController;
 use Modules\ReportingModule\Http\Controllers\AdminDashboardController;
 use Modules\AssesmentModule\Http\Controllers\Api\V1\QuizController;
@@ -41,6 +43,9 @@ Route::group([
      * @controller AdminDashboardController@index
      */
     Route::get('/dashboard', [AdminDashboardController::class, 'index']);
+    Route::get('/settings', [SuperAdminSettingsController::class, 'show']);
+    Route::put('/settings', [SuperAdminSettingsController::class, 'update']);
+    Route::get('/security/audit-logs', [SecurityAuditLogController::class, 'index'])->middleware('throttle:platform-write');
 
     /**
     |--------------------------------------------------------------------------

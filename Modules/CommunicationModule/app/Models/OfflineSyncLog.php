@@ -10,6 +10,6 @@ class OfflineSyncLog extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['user_id', 'offline_package_id', 'device_id', 'action', 'payload'];
-    protected $casts = ['payload' => 'array'];
+    protected $fillable = ['user_id', 'offline_package_id', 'device_id', 'client_event_id', 'action', 'payload', 'created_at'];
+    protected $casts = ['payload' => 'array', 'created_at' => 'datetime'];
 }

@@ -57,19 +57,8 @@ class LessonService
 
             $lesson = Lesson::create($data);
 
-            if (isset($data['video']) && $data['video']->isValid()) {
-                $lesson->addMedia($data['video'])->toMediaCollection('video');
-            }
+            $this->syncLessonMedia($lesson, $data);
 
-            if (isset($data['attachments']) && is_array($data['attachments'])) {
-                foreach ($data['attachments'] as $file) {
-                    if ($file->isValid()) {
-                        $lesson->addMedia($file)->toMediaCollection('attachments');
-                    }
-                }
-            }
-
-            // Clear lesson and unit cache after creation
             $this->clearLessonCache($lesson, $unit);
 
             Log::info("Lesson created", [
@@ -108,19 +97,9 @@ class LessonService
             }
 
             $lesson->update($data);
-            if (isset($data['video']) && $data['video']->isValid()) {
-                $lesson->addMedia($data['video'])->toMediaCollection('video');
-            }
 
-            if (isset($data['attachments']) && is_array($data['attachments'])) {
-                foreach ($data['attachments'] as $file) {
-                    if ($file->isValid()) {
-                        $lesson->addMedia($file)->toMediaCollection('attachments');
-                    }
-                }
-            }
+            $this->syncLessonMedia($lesson, $data);
 
-            // Clear lesson and unit cache after update
             $this->clearLessonCache($lesson);
 
             Log::info("Lesson updated", [
@@ -310,6 +289,40 @@ class LessonService
         $unit = $unit ?? $lesson->unit;
         if ($unit) {
             $this->flushTags(["unit.{$unit->unit_id}"]);
+        }
+    }
+
+    /**
+     * Persist any uploaded media files to the matching lesson collections.
+     *
+     * Single-file collections (`video`, `pdf`, `presentation`) accept one
+     * upload per request. Multi-file collections (`audio`, `attachments`)
+     * accept arrays of uploads. MIME validation is enforced on the model.
+     *
+     * @param Lesson $lesson
+     * @param array<string, mixed> $data
+     */
+    protected function syncLessonMedia(Lesson $lesson, array $data): void
+    {
+        $singleCollections = ['video', 'pdf', 'presentation'];
+        foreach ($singleCollections as $collection) {
+            if (isset($data[$collection]) && is_object($data[$collection]) && method_exists($data[$collection], 'isValid') && $data[$collection]->isValid()) {
+                $lesson->clearMediaCollection($collection);
+                $lesson->addMedia($data[$collection])->toMediaCollection($collection);
+            }
+        }
+
+        $multiCollections = ['audio', 'attachments'];
+        foreach ($multiCollections as $collection) {
+            if (!isset($data[$collection]) || !is_array($data[$collection])) {
+                continue;
+            }
+
+            foreach ($data[$collection] as $file) {
+                if (is_object($file) && method_exists($file, 'isValid') && $file->isValid()) {
+                    $lesson->addMedia($file)->toMediaCollection($collection);
+                }
+            }
         }
     }
 }

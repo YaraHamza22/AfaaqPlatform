@@ -13,8 +13,10 @@ Route::group([
     'middleware' => 'api',
     'prefix' => 'v1/auth',
 ], function ($router) {
-    Route::post('/register', [AuthController::class, 'register']);
-    Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:platform-write');
+    Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:auth-sensitive');
+    Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:auth-sensitive');
+    Route::post('/reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:auth-sensitive');
     Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:api');
     Route::post('/refresh', [AuthController::class, 'refresh'])->middleware('auth:api');
     Route::get('/profile', [AuthController::class, 'profile'])->middleware('auth:api');
@@ -25,8 +27,10 @@ Route::group([
     'middleware' => 'api',
     'prefix' => 'v1/super-admin/auth',
 ], function ($router) {
-    Route::post('/register', [AuthController::class, 'register']);
-    Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:platform-write');
+    Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:auth-sensitive');
+    Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:auth-sensitive');
+    Route::post('/reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:auth-sensitive');
     Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:api');
     Route::post('/refresh', [AuthController::class, 'refresh'])->middleware('auth:api');
     Route::get('/profile', [AuthController::class, 'profile'])->middleware('auth:api');

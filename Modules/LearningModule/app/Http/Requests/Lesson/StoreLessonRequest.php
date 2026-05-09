@@ -45,9 +45,13 @@ class StoreLessonRequest extends ApiFormRequest
             'lesson_type' => ['required', 'string', Rule::in(['lecture', 'video', 'interactive', 'reading'])],
             'is_required' => ['nullable', 'boolean'],
             'actual_duration_minutes' => ['required', 'integer', 'min:1'],
-            'video'=> 'nullable|file|mimes:mp4,mov,ogg,qt|max:2097152',
-            'attachments' => 'nullable|array',
-            'attachments.*' => 'file|mimes:pdf,zip,rar,doc,docx,ppt,pptx|max:10240',
+            'video'        => 'nullable|file|mimes:mp4,mov,ogg,qt,m4v,webm|max:2097152',
+            'pdf'          => 'nullable|file|mimes:pdf|max:51200',
+            'presentation' => 'nullable|file|mimes:ppt,pptx,odp|max:51200',
+            'audio'        => 'nullable|array',
+            'audio.*'      => 'file|mimes:mp3,wav,ogg,aac,m4a,mpga|max:51200',
+            'attachments'  => 'nullable|array',
+            'attachments.*' => 'file|mimes:pdf,zip,rar,doc,docx,ppt,pptx,xls,xlsx,txt|max:10240',
         ];
     }
 

@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Modules\CommunicationModule\Http\Requests\Offline\IssueDownloadTokenRequest;
 use Modules\CommunicationModule\Http\Requests\Offline\StoreOfflinePackageRequest;
+use Modules\CommunicationModule\Http\Requests\Offline\StoreOfflineSyncBatchRequest;
 use Modules\CommunicationModule\Http\Requests\Offline\StoreOfflineSyncLogRequest;
 use Modules\CommunicationModule\Models\OfflineDownloadToken;
 use Modules\CommunicationModule\Models\OfflinePackage;
@@ -56,6 +57,26 @@ class OfflinePackageController extends Controller
         $payload['user_id'] = Auth::id();
         $log = $this->integrationService->storeSyncLog($payload);
         return self::success($log, 'Offline sync log stored successfully.', 201);
+    }
+
+    public function storeSyncLogBatch(StoreOfflineSyncBatchRequest $request)
+    {
+        $payload = $request->validated();
+        $result = $this->integrationService->storeSyncLogsBatch(
+            (int) Auth::id(),
+            (string) $payload['device_id'],
+            (array) $payload['entries']
+        );
+
+        return self::success($result, 'Offline sync batch processed successfully.', 201);
+    }
+
+    public function delta(Request $request, int $courseId)
+    {
+        $currentVersion = $request->query('version');
+        $result = $this->integrationService->resolveOfflineDelta($courseId, $currentVersion ? (string) $currentVersion : null);
+
+        return self::success($result, 'Offline delta resolved successfully.');
     }
 
     public function downloadByToken(Request $request, ?string $token = null)

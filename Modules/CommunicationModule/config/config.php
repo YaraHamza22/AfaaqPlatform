@@ -2,6 +2,9 @@
 
 return [
     'name' => 'CommunicationModule',
+    'http' => [
+        'ca_bundle' => env('HTTP_CA_BUNDLE', null),
+    ],
     'integrations' => [
         'zoom' => [
             'client_id' => env('COMM_ZOOM_CLIENT_ID', ''),
@@ -26,12 +29,30 @@ return [
                 'profile',
             ],
         ],
+        'google_meet' => [
+            'client_id' => env('COMM_GOOGLE_CLASSROOM_CLIENT_ID', ''),
+            'client_secret' => env('COMM_GOOGLE_CLASSROOM_CLIENT_SECRET', ''),
+            'redirect_uri' => env('COMM_GOOGLE_CLASSROOM_REDIRECT_URI', ''),
+            'authorize_url' => env('COMM_GOOGLE_CLASSROOM_AUTHORIZE_URL', 'https://accounts.google.com/o/oauth2/v2/auth'),
+            'token_url' => env('COMM_GOOGLE_CLASSROOM_TOKEN_URL', 'https://oauth2.googleapis.com/token'),
+            'api_base_url' => env('COMM_GOOGLE_CLASSROOM_API_BASE_URL', 'https://classroom.googleapis.com/v1'),
+            'scopes' => [
+                'https://www.googleapis.com/auth/classroom.courses.readonly',
+                'https://www.googleapis.com/auth/classroom.coursework.students',
+                'openid',
+                'email',
+                'profile',
+            ],
+        ],
     ],
     'webhooks' => [
         'zoom' => [
             'secret' => env('COMM_WEBHOOK_ZOOM_SECRET', ''),
         ],
         'google_classroom' => [
+            'secret' => env('COMM_WEBHOOK_GOOGLE_CLASSROOM_SECRET', ''),
+        ],
+        'google_meet' => [
             'secret' => env('COMM_WEBHOOK_GOOGLE_CLASSROOM_SECRET', ''),
         ],
     ],

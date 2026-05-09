@@ -12,7 +12,7 @@ class StoreIntegrationRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'provider' => ['required', 'string', 'in:zoom,google_classroom'],
+            'provider' => ['required', 'string', 'in:zoom,google_meet,google_classroom'],
             'external_account_id' => ['nullable', 'string', 'max:255'],
             'access_token' => ['nullable', 'string'],
             'refresh_token' => ['nullable', 'string'],

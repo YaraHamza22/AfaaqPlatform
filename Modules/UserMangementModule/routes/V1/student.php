@@ -5,6 +5,7 @@ use Modules\LearningModule\Http\Controllers\CourseController;
 use Modules\LearningModule\Http\Controllers\EnrollmentController;
 use Modules\LearningModule\Http\Controllers\LessonController;
 use Modules\LearningModule\Http\Controllers\UnitController;
+use Modules\AssesmentModule\Http\Controllers\Api\V1\CertificateController;
 use Modules\ReportingModule\Http\Controllers\StudentDashboardController;
 use Modules\UserMangementModule\Http\Controllers\Api\V1\StudentController;
 
@@ -175,6 +176,14 @@ Route::group(['middleware' => ['auth:api', 'role:student,api']], function () {
      * @controller LessonController@getDurationForCourseUnit
      */
     Route::get('/my-learning/{course}/units/{unit}/lessons/{lesson}/duration', [LessonController::class, 'getDurationForCourseUnit']);
+
+    /**
+     * @name   Download Course Certificate
+     * @path   GET /api/v1/my-learning/{courseId}/certificate
+     * @desc   Download certificate for authenticated student when eligible.
+     * @controller CertificateController@download
+     */
+    Route::get('/my-learning/{courseId}/certificate', [CertificateController::class, 'download']);
 
     /*
      * Flat Learning-module URLs (GET /api/v1/units/..., /api/v1/lessons/...) live in

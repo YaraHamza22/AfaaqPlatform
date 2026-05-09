@@ -3,7 +3,9 @@
 namespace Modules\UserMangementModule\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use Modules\UserMangementModule\Http\Requests\Api\V1\Auth\ForgotPasswordRequest;
 use Modules\UserMangementModule\Http\Requests\Api\V1\Auth\LoginRequest;
+use Modules\UserMangementModule\Http\Requests\Api\V1\Auth\ResetPasswordRequest;
 use Modules\UserMangementModule\Http\Requests\Api\V1\Auth\RegisterRequest;
 use Modules\UserMangementModule\Services\V1\AuthService;
 use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
@@ -64,5 +66,27 @@ class AuthController extends Controller
         ];
 
         return self::success($data);
+    }
+
+    public function forgotPassword(ForgotPasswordRequest $request)
+    {
+        $result = $this->authService->sendPasswordResetLink($request->validated());
+
+        if ($result['status'] === 'error') {
+            return self::error($result['message'], 422, $result);
+        }
+
+        return self::success($result, $result['message']);
+    }
+
+    public function resetPassword(ResetPasswordRequest $request)
+    {
+        $result = $this->authService->resetPassword($request->validated());
+
+        if ($result['status'] === 'error') {
+            return self::error($result['message'], 422, $result);
+        }
+
+        return self::success($result, $result['message']);
     }
 }
